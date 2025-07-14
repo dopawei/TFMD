@@ -30,7 +30,7 @@ The core of the TFMD methodology is illustrated in the flowchart below. This pro
 -   `tfmd.m`: The core function that implements the Time-Frequency Mode Decomposition algorithm.
 -   `test.m`: A comprehensive test suite that demonstrates how to use `tfmd.m` on various signals.
 -   `generate_signal.m`: A script to generate sample signals for testing purposes.
--   `Flowchart.pdf`: The source PDF file containing the detailed methodology flowchart.
+-   `Flowchart.png`: The source PNG file containing the detailed methodology flowchart.
 
 ## How to Use
 
