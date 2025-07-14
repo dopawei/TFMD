@@ -41,7 +41,8 @@ The easiest way to see the algorithm in action is to run the complete test suite
 ```matlab
 % This script will generate signals, apply TFMD, calculate performance,
 % and create figures for each case.
-test;```
+test;
+```
 
 ### 2. Step-by-Step Usage
 
