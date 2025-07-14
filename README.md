@@ -64,7 +64,7 @@ The `tfmd` function requires an options struct to control its behavior. You can 
 % Define TFMD parameters
 tfmd_options = struct();
 tfmd_options.window_length = 128;          % STFT window length
-tfmd_options.win_type = 'gaussian';        % Window type ('gaussian' or 'hann')
+tfmd_options.win_type = 'gaussian';        % Window type ('gaussian')
 tfmd_options.alpha = 2.5;                  % Shape parameter for Gaussian window
 tfmd_options.overlap_ratio = 115/128;      % Overlap ratio (e.g., 115/128 ≈ 89.8%)
 tfmd_options.threshold_factor = 2.0;       % Adaptive thresholding factor
