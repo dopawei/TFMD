@@ -41,8 +41,7 @@ The easiest way to see the algorithm in action is to run the complete test suite
 ```matlab
 % This script will generate signals, apply TFMD, calculate performance,
 % and create figures for each case.
-test;
-```
+test;```
 
 ### 2. Step-by-Step Usage
 
@@ -55,7 +54,8 @@ First, obtain your signal and sampling frequency `fs`. You can use the provided 
 fs = 1000; % Sampling frequency in Hz
 case_idx = 1; % For example, the first signal case
 signal_data = generate_signal(case_idx, fs);
-input_signal = signal_data.clean;```
+input_signal = signal_data.clean;
+```
 
 #### Step 2: Define TFMD Parameters
 The `tfmd` function requires an options struct to control its behavior. You can define it as follows:
