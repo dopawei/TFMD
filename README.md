@@ -1,12 +1,40 @@
-# TFMD: Time-Frequency Mode Decomposition
 
-This repository contains the MATLAB implementation for **Time-Frequency Mode Decomposition (TFMD)**, a fast, robust, and adaptive framework for analyzing complex multicomponent signals.
+---
+
+# STFT-based Time-Frequency Mode Decomposition: A Fast and Robust Method for Multicomponent Signal Analysis
+
+This repository contains the official MATLAB implementation for **Time-Frequency Mode Decomposition (TFMD)**, a fast, robust, and adaptive framework for analyzing complex multicomponent signals, as presented in the paper by Zhou, Li, and Ren.
+
+---
+
+## Citation
+
+If you use TFMD or this code in your research, please cite the following paper:
+
+**Wei Zhou, Wei-Jian Li, Wei-Xin Ren. "STFT-based Time-Frequency Mode Decomposition: A Fast and Robust Method for Multicomponent Signal Analysis." arXiv preprint arXiv:2507.11919 [eess.SP], 2024.**
+
+-   **arXiv Link:** [https://arxiv.org/abs/2507.11919](https://arxiv.org/abs/2507.11919)
+-   **DOI:** [https://doi.org/10.48550/arXiv.2507.11919](https://doi.org/10.48550/arXiv.2507.11919)
+
+**BibTeX:**
+```bibtex
+@misc{zhou2024stftbased,
+      title={STFT-based Time-Frequency Mode Decomposition: A Fast and Robust Method for Multicomponent Signal Analysis}, 
+      author={Wei Zhou and Wei-Jian Li and Wei-Xin Ren},
+      year={2024},
+      eprint={2507.11919},
+      archivePrefix={arXiv},
+      primaryClass={eess.SP}
+}
+```
+
+## Abstract
+
+> The decomposition of complex, multicomponent, and non-stationary signals into their constituent modes is a fundamental yet significant challenge in science and engineering. Existing methods often struggle with a trade-off among accuracy, computational cost, and the need for prior information such as the number of modes. This paper introduces time-frequency mode decomposition (TFMD), a novel framework for the fast, robust, and adaptive decomposition of such signals. TFMD operates on the principle that modes form contiguous high-energy regions in the time-frequency domain. Its non-iterative pipeline reframes signal decomposition as an image segmentation task: a signal is transformed into a spectrogram, which is then smoothed to enhance the continuity of these high-energy regions. A sequence of adaptive thresholding and connected-component labeling with size-based filtering is then employed to automatically segment the spectrogram and generate a mask for each mode. The modes are finally reconstructed via the inverse short-time Fourier transform. Validation on diverse synthetic signals demonstrates that TFMD accurately determines the number of modes and reconstructs them with high fidelity. Its performance is particularly strong in high-noise conditions. A comparative analysis confirms that TFMD provides robust, competitive performance across a wider variety of signal types, while a theoretical complexity analysis reveals its superior computational efficiency stemming from its non-iterative design. The method's practical utility is further demonstrated by successfully extracting modal responses from a real-world footbridge vibration signal. TFMD provides a computationally efficient and powerful paradigm for multicomponent signal analysis, offering a compelling balance of accuracy, versatility, and efficiency for large-scale or time-sensitive applications.
 
 ## Introduction
 
-The decomposition of complex, multicomponent, and non-stationary signals is a fundamental challenge in science and engineering. Existing methods often struggle with a trade-off between accuracy, computational cost, and the need for prior information, such as the number of modes.
-
-This project introduces **TFMD**, a novel method developed to address these challenges. The framework is built on a central hypothesis: **constituent signal modes manifest as contiguous, high-energy regions in the time-frequency (TF) domain, which are structurally distinguishable from noise.**
+This project introduces **TFMD**, a novel method developed to address the challenges of decomposing complex signals. The framework is built on a central hypothesis: **constituent signal modes manifest as contiguous, high-energy regions in the time-frequency (TF) domain, which are structurally distinguishable from noise.**
 
 TFMD reframes signal decomposition as an image segmentation task. The signal's spectrogram is processed through a direct, non-iterative pipeline that includes smoothing, adaptive thresholding, and connected-component labeling (CCL) to automatically generate a mask for each mode. These modes are then reconstructed via the inverse short-time Fourier transform (ISTFT).
 
