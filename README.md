@@ -21,7 +21,7 @@ If you use TFMD or this code in your research, please cite the following paper:
 @misc{zhou2024stftbased,
       title={STFT-based Time-Frequency Mode Decomposition: A Fast and Robust Method for Multicomponent Signal Analysis}, 
       author={Wei Zhou and Wei-Jian Li and Wei-Xin Ren},
-      year={2024},
+      year={2025},
       eprint={2507.11919},
       archivePrefix={arXiv},
       primaryClass={eess.SP}
