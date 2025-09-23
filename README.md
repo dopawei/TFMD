@@ -11,7 +11,7 @@ This repository contains the official MATLAB implementation for **Time-Frequency
 
 If you use TFMD or this code in your research, please cite the following paper:
 
-**Wei Zhou, Wei-Jian Li, Wei-Xin Ren. "STFT-based Time-Frequency Mode Decomposition: A Fast and Robust Method for Multicomponent Signal Analysis." arXiv preprint arXiv:2507.11919 [eess.SP], 2024.**
+**Wei Zhou, Wei-Jian Li, Wei-Xin Ren. "STFT-based Time-Frequency Mode Decomposition: A Fast and Robust Method for Multicomponent Signal Analysis." arXiv preprint arXiv:2507.11919 [eess.SP], 2025.**
 
 -   **arXiv Link:** [https://arxiv.org/abs/2507.11919](https://arxiv.org/abs/2507.11919)
 -   **DOI:** [https://doi.org/10.48550/arXiv.2507.11919](https://doi.org/10.48550/arXiv.2507.11919)
