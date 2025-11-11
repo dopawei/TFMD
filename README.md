@@ -139,5 +139,5 @@ legend('Original', 'Reconstructed');
 }
 ```
 
-**Related Work:**  
+## Related Work:
 Zhou et al. (2022). Empirical Fourier decomposition. *Mech. Syst. Signal Process.*, 163, 108155.
