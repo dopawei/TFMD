@@ -1,244 +1,165 @@
 function [components, reconstructed_signal] = tfmd(input_signal, fs, options)
-% tfmd - Time-Frequency Mode Decomposition
+% TFMD - Time-Frequency Mode Decomposition
 %
-% Input parameters:
-%   input_signal    - Input signal (column vector)
-%   fs             - Sampling frequency (Hz)
-%   options        - Optional parameter structure
+% Usage:
+%   [components, reconstructed_signal] = tfmd(signal, fs)
+%   [components, reconstructed_signal] = tfmd(signal, fs, options)
 %
-% Output parameters:
-%   components     - Decomposed modal components (cell array)
-%   reconstructed_signal - Reconstructed signal (column vector)
+% Inputs:
+%   signal  - Input signal (vector)
+%   fs      - Sampling frequency (Hz)
+%   options - Optional parameters (struct):
+%             .window_length: STFT window length (default: 128)
+%             .alpha: Gaussian window shape (default: 2.5)
+%             .overlap_ratio: Window overlap (default: 0.90)
+%             .beta: Expansion factor (default: 0.5)
+%             .sigma: Size filter threshold (default: 1e-3)
 %
-% Features:
-%   - Gaussian window only
-%   - No padding support
-%   - Optimized for synthetic signal analysis
-%
-% Author: Wei Zhou, College of Civil and Transportation Engineering, Shenzhen University, Shenzhen, 518061, China
-% Date: July 2025
+% Outputs:
+%   components - Cell array of extracted modes
+%   reconstructed_signal - Sum of all modes
 
-%% Default parameter settings
-params = struct();
-params.window_length = 128;           % Window length (samples)
-params.alpha = 2.5;                   % Gaussian window shape parameter
-params.overlap_ratio = 0.90;          % 90% overlap
-params.threshold_factor = 2.0;        % Threshold factor (C_thresh)
-params.min_component_size = 10;       % Minimum connected component size (P_abs)
-params.min_component_ratio = 0.005;   % Minimum connected component ratio (P_rel)
-params.denoise_filter_size = [3, 3];  % Spectrogram smoothing filter size
+% Default parameters (manuscript notation)
+if nargin < 3 || isempty(options)
+    options = struct();
+end
 
-% User parameter override
-if nargin >= 3 && isstruct(options)
-    fields = fieldnames(options);
-    for i = 1:length(fields)
-        if isfield(params, fields{i})
-            params.(fields{i}) = options.(fields{i});
+% Accept both old and new parameter names for backward compatibility
+G = get_param(options, {'G', 'window_length'}, 128);
+alpha = get_param(options, {'alpha'}, 2.5);
+rho = get_param(options, {'rho', 'overlap_ratio'}, 0.90);
+beta = get_param(options, {'beta', 'expansion_factor'}, 0.5);
+sigma = get_param(options, {'sigma', 'min_pixel_ratio'}, 1e-3);
+
+% Helper function to get parameter with multiple possible names
+function val = get_param(opts, names, default)
+    val = default;
+    for i = 1:length(names)
+        if isfield(opts, names{i})
+            val = opts.(names{i});
+            return;
         end
     end
 end
 
-% Ensure input is a column vector
-if size(input_signal, 2) > 1
-    input_signal = input_signal(:);
-end
+% Prepare signal
+input_signal = input_signal(:);
+N = length(input_signal);
+pad_len = floor(G / 2);
+padded = wextend(1, 'sym', input_signal, pad_len);
 
-original_length = length(input_signal);
+% STFT
+H = round(G * (1 - rho));
+K = max(256, 2^nextpow2(G));
+win = gausswin(G, alpha);
+[S, F, T] = stft(padded, fs, 'Window', win, 'OverlapLength', G-H, ...
+                 'FFTLength', K, 'FrequencyRange', 'centered');
 
-%% Step 1: Compute Short-Time Fourier Transform (STFT)
-window_length = min(params.window_length, length(input_signal));
-overlap_length = round(window_length * params.overlap_ratio);
-nfft = max(256, 2^nextpow2(window_length));
+% Extract positive frequencies
+[Kf, M] = size(S);
+k_dc = floor(Kf/2) + 1;
+S_pos = S(k_dc:end, :);
+magnitude = abs(S_pos);
 
-% Create Gaussian window
-if license('test', 'Signal_Toolbox')
-    window = gausswin(window_length, params.alpha);
-else
-    % Manual Gaussian window creation
-    t_win = -(window_length-1)/2:(window_length-1)/2;
-    window = exp(-0.5 * (params.alpha * t_win / ((window_length-1)/2)).^2)';
-end
-
-% Compute STFT
-[S, F, T] = stft(input_signal, fs, 'Window', window, ...
-    'OverlapLength', overlap_length, 'FFTLength', nfft, ...
-    'FrequencyRange', 'centered');
-
-%% Step 2: Extract non-negative frequency components
-[num_freq_bins, num_time_frames] = size(S);
-dc_index = floor(num_freq_bins/2) + 1;
-positive_freq_indices = dc_index:num_freq_bins;
-
-S_positive = S(positive_freq_indices, :);
-F_positive = F(positive_freq_indices);
-
-% Compute magnitude spectrogram
-magnitude_spectrum = abs(S_positive);
-
-%% Step 3: Spectrogram smoothing (denoising)
-magnitude_spectrum_smoothed = magnitude_spectrum;
-if all(params.denoise_filter_size > 1)
-    try
-        % Apply 2D smoothing filter
-        filter_kernel = ones(params.denoise_filter_size) / prod(params.denoise_filter_size);
-        if exist('imfilter', 'file')
-            magnitude_spectrum_smoothed = imfilter(magnitude_spectrum, filter_kernel, 'replicate');
-        else
-            % Manual convolution if Image Processing Toolbox not available
-            magnitude_spectrum_smoothed = conv2(magnitude_spectrum, filter_kernel, 'same');
-        end
-    catch
-        warning('Spectrogram smoothing failed. Using original magnitude spectrum.');
-    end
-end
-
-%% Step 4: Adaptive threshold calculation
-magnitude_values = magnitude_spectrum_smoothed(:);
-max_magnitude = max(magnitude_values);
-median_magnitude = median(magnitude_values);
-
-% Geometric mean threshold (Equation 13 in paper)
-if median_magnitude < eps
-    if max_magnitude < eps
-        threshold = 0;
-    else
-        mean_magnitude = mean(magnitude_values);
-        threshold = sqrt(max_magnitude * max(mean_magnitude, eps) / params.threshold_factor);
-    end
-else
-    threshold = sqrt(max_magnitude * median_magnitude / params.threshold_factor);
-end
-
-%% Step 5: Initial binary mask generation
-binary_mask = magnitude_spectrum_smoothed > threshold;
-
-%% Step 6: Connected-component labeling (CCL)
+% K-means clustering to find signal cores
+features = magnitude(:);
 try
-    [labeled_components, num_components] = bwlabel(binary_mask, 8);
+    labels = kmeans(features, 2, 'MaxIter', 100, 'Replicates', 1);
 catch
-    % If Image Processing Toolbox is not available, use simple CCL algorithm
-    [labeled_components, num_components] = simple_connected_components(binary_mask);
+    labels = kmeans(features, 2, 'MaxIter', 100);
 end
+labels = reshape(labels, size(magnitude));
+means = grpstats(features, labels(:), 'mean');
+[~, signal_id] = max(means);
+mask_core = (labels == signal_id);
 
-%% Step 7: Size-based filtering of candidate masks
-min_pixels = max(params.min_component_size, ...
-    floor(params.min_component_ratio * numel(binary_mask)));
+% Connected-component labeling
+[L0, N0] = bwlabel(mask_core, 8);
 
-valid_components = [];
-for i = 1:num_components
-    component_mask = (labeled_components == i);
-    if sum(component_mask(:)) >= min_pixels
-        valid_components(end+1) = i;
+% Size filtering
+min_size = round(numel(L0) * sigma);
+L = L0;
+for i = 1:N0
+    if sum(L(:) == i) < min_size
+        L(L == i) = 0;
     end
 end
+[L, Nf] = bwlabel(L > 0, 8);
 
-%% Step 8: Construct full frequency domain masks and reconstruct signals
-num_valid_components = length(valid_components);
-components = cell(1, num_valid_components);
-
-for i = 1:num_valid_components
-    comp_id = valid_components(i);
-    
-    % Get positive frequency mask
-    positive_mask = (labeled_components == comp_id);
-    
-    % Construct full frequency domain mask (including negative frequencies)
-    full_mask = false(num_freq_bins, num_time_frames);
-    full_mask(positive_freq_indices, :) = positive_mask;
-    
-    % Symmetric extension for negative frequencies (conjugate symmetry)
-    for k = 1:(dc_index-1)
-        symmetric_index = 2*dc_index - k;
-        source_index = symmetric_index - dc_index + 1;
-        if source_index >= 1 && source_index <= size(positive_mask, 1)
-            full_mask(k, :) = positive_mask(source_index, :);
-        end
+% Iterative Competitive Dilation (ICD)
+if Nf > 0
+    % Calculate expansion radius for each component
+    r = zeros(1, Nf);
+    for i = 1:Nf
+        area = sum(L(:) == i);
+        r(i) = max(1, round(beta * sqrt(area / pi)));
     end
     
-    % Apply mask to extract masked TF component
-    masked_stft = S .* full_mask;
+    % Expand regions
+    L_expand = L;
+    blocked = false(size(L));
+    se = strel('square', 3);
     
-    % Inverse STFT (ISTFT) for time-domain mode reconstruction
-    try
-        reconstructed_component = istft(masked_stft, fs, 'Window', window, ...
-            'OverlapLength', overlap_length, 'FFTLength', nfft, ...
-            'FrequencyRange', 'centered', 'ConjugateSymmetric', true);
-        
-        % Adjust length to match original signal
-        if length(reconstructed_component) > original_length
-            reconstructed_component = reconstructed_component(1:original_length);
-        elseif length(reconstructed_component) < original_length
-            reconstructed_component(end+1:original_length) = 0;
-        end
-        
-        components{i} = reconstructed_component(:);
-    catch ME
-        warning('Failed to reconstruct component %d: %s', i, ME.message);
-        components{i} = zeros(original_length, 1);
-    end
-end
-
-%% Step 9: Final signal synthesis
-if num_valid_components > 0
-    reconstructed_signal = sum(cat(2, components{:}), 2);
-else
-    reconstructed_signal = zeros(original_length, 1);
-end
-
-% Ensure output is column vector with correct length
-reconstructed_signal = reconstructed_signal(:);
-if length(reconstructed_signal) ~= original_length
-    if length(reconstructed_signal) > original_length
-        reconstructed_signal = reconstructed_signal(1:original_length);
-    else
-        temp_signal = zeros(original_length, 1);
-        temp_signal(1:length(reconstructed_signal)) = reconstructed_signal;
-        reconstructed_signal = temp_signal;
-    end
-end
-
-end
-
-%% Auxiliary function: Simple connected-component labeling algorithm
-function [labeled, num_labels] = simple_connected_components(binary_image)
-% Simple 8-connected component labeling algorithm (without Image Processing Toolbox)
-
-[rows, cols] = size(binary_image);
-labeled = zeros(rows, cols);
-num_labels = 0;
-
-% 8-connected neighborhood offsets
-neighbors = [-1,-1; -1,0; -1,1; 0,-1; 0,1; 1,-1; 1,0; 1,1];
-
-for i = 1:rows
-    for j = 1:cols
-        if binary_image(i,j) && labeled(i,j) == 0
-            % Found new connected component
-            num_labels = num_labels + 1;
-            
-            % Use depth-first search to label connected component
-            stack = [i, j];
-            while ~isempty(stack)
-                current_i = stack(end, 1);
-                current_j = stack(end, 2);
-                stack(end, :) = [];
+    for iter = 1:max(r)
+        claims = zeros(size(L));
+        for i = 1:Nf
+            if iter <= r(i)
+                mask_i = (L_expand == i);
+                dilated = imdilate(mask_i, se);
+                frontier = dilated & ~mask_i & (L_expand == 0) & ~blocked;
                 
-                if current_i >= 1 && current_i <= rows && ...
-                   current_j >= 1 && current_j <= cols && ...
-                   binary_image(current_i, current_j) && labeled(current_i, current_j) == 0
-                    
-                    labeled(current_i, current_j) = num_labels;
-                    
-                    % Add neighbors to stack
-                    for k = 1:size(neighbors, 1)
-                        ni = current_i + neighbors(k, 1);
-                        nj = current_j + neighbors(k, 2);
-                        stack(end+1, :) = [ni, nj];
-                    end
+                if any(frontier(:))
+                    contested = frontier & (claims > 0);
+                    new_claims = frontier & (claims == 0);
+                    claims(new_claims) = i;
+                    claims(contested) = -1;
                 end
             end
         end
+        
+        blocked(claims == -1) = true;
+        accept = (claims > 0) & ~blocked;
+        if ~any(accept(:))
+            break;
+        end
+        L_expand(accept) = claims(accept);
+    end
+else
+    L_expand = L;
+end
+
+% Reconstruct modes
+components = cell(1, Nf);
+for i = 1:Nf
+    % Create mask with Hermitian symmetry
+    mask = false(Kf, M);
+    mask(k_dc:end, :) = (L_expand == i);
+    if mod(K, 2) == 0
+        mask(2:k_dc-1, :) = flipud(mask(k_dc+1:end, :));
+    else
+        mask(1:k_dc-1, :) = flipud(mask(k_dc+1:end, :));
+    end
+    
+    % ISTFT
+    S_masked = S .* mask;
+    recon_pad = real(istft(S_masked, fs, 'Window', win, 'OverlapLength', G-H, ...
+                           'FFTLength', K, 'FrequencyRange', 'centered'));
+    
+    % Remove padding
+    if length(recon_pad) >= pad_len + N
+        components{i} = recon_pad(pad_len+1 : pad_len+N);
+    else
+        components{i} = zeros(N, 1);
     end
 end
+
+% Total reconstruction
+if Nf > 0
+    reconstructed_signal = sum(cat(2, components{:}), 2);
+else
+    reconstructed_signal = zeros(N, 1);
+end
+
+fprintf('TFMD: Extracted %d modes from signal (N=%d, fs=%d Hz)\n', Nf, N, fs);
 
 end

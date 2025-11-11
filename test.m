@@ -1,272 +1,239 @@
-%% Simplified TFMD Test Suite - All 6 Signal Cases
-% Focused evaluation of TFMD on all synthetic signals
-
+%% TFMD Test Suite - All 6 Signal Cases
 clear; close all; clc;
 
-%% Global Parameters
-fs = 1000;  % Sampling frequency (Hz)
-num_cases = 6;  % Total number of test cases
+fprintf('====================================\n');
+fprintf('        TFMD Test Suite\n');
+fprintf('====================================\n\n');
 
-fprintf('=== Simplified TFMD Test Suite ===\n');
-fprintf('Testing all %d synthetic signal cases\n', num_cases);
+%% Parameters
+fs = 1000;  % Sampling frequency
+snr_db = 100;  % SNR (set to 100 for near noise-free)
 
-%% TFMD Parameters (Manuscript Specifications)
-base_options = struct();
-base_options.window_length = 128;          % L_w = 128 samples
-base_options.win_type = 'gaussian';        % Gaussian analysis window
-base_options.alpha = 2.5;                  % Shape parameter α = 2.5
-base_options.overlap_ratio = 115/128;      % 115 samples overlap → 89.8%
-base_options.threshold_factor = 2.0;       % C_thresh = 2
-base_options.min_component_size = 10;      % P_abs = 10 pixels
-base_options.min_component_ratio = 0.005;  % P_rel = 0.005
-base_options.denoise_filter_size = [3, 3]; % U × V = 3 × 3 kernel
+% TFMD parameters (manuscript notation)
+options = struct();
+options.G = 128;            % Window length (Eq. 2)
+options.alpha = 2.5;        % Gaussian shape parameter α (Eq. 2)
+options.rho = 115/128;      % Overlap ratio ρ (Eq. 3)
+options.beta = 0.5;         % Expansion factor β (Eq. 7)
+options.sigma = 1e-3;       % Minimum area ratio σ (Eq. 9)
 
-fprintf('TFMD Parameters:\n');
-fprintf('  - Gaussian window: L_w = %d samples, α = %.1f\n', base_options.window_length, base_options.alpha);
-fprintf('  - Overlap: 115 samples (%.1f%%)\n', base_options.overlap_ratio*100);
-fprintf('  - Threshold: C_thresh = %.1f\n', base_options.threshold_factor);
-fprintf('  - Pixel thresholds: P_abs = %d, P_rel = %.3f\n', base_options.min_component_size, base_options.min_component_ratio);
-fprintf('----------------------------------------\n\n');
+fprintf('TFMD Parameters (Manuscript Notation):\n');
+fprintf('  G     = %d samples (window length)\n', options.G);
+fprintf('  alpha = %.1f (Gaussian shape)\n', options.alpha);
+fprintf('  rho   = %.4f (overlap ratio: 115/128)\n', options.rho);
+fprintf('  beta  = %.2f (expansion factor)\n', options.beta);
+fprintf('  sigma = %.0e (min area ratio)\n\n', options.sigma);
 
-%% Storage for Results
-results = struct();
+%% Test all cases
+results = cell(1, 6);
 
-%% Main Test Loop
-for case_idx = 1:num_cases
-    fprintf('=== Testing Case %d ===\n', case_idx);
+for case_idx = 1:6
+    fprintf('--- Case %d ---\n', case_idx);
     
-    %% Generate Signal
-    signal_data = generate_signal(case_idx, fs);
+    % Generate signal
+    data = generate_signal(case_idx, fs);
+    fprintf('Signal: %s (N_gt=%d)\n', data.name, data.num_gt);
     
-    fprintf('Signal: %s\n', signal_data.name);
-    fprintf('Ground truth components: %d\n', signal_data.num_gt);
-    
-    %% Set Case-Specific Parameters
-    tfmd_options = base_options;
-    
-    % Special parameter for Case 5
-    if case_idx == 5
-        tfmd_options.alpha = 2.0;  % α = 2.0 for Case 5
-        fprintf('Note: Using α = 2.0 for Case 5\n');
-    end
-    
-    %% Apply TFMD
-    fprintf('Applying TFMD...\n');
-    [components, reconstructed_signal] = tfmd(signal_data.clean, fs, tfmd_options);
-    
-    %% Calculate Performance Metrics
-    N_gt = signal_data.num_gt;
-    N_f = length(components);
-    
-    % Total reconstruction error (E_rel,total)
-    error_total = norm(signal_data.clean - reconstructed_signal) / norm(signal_data.clean);
-    
-    % Individual component matching and errors using minimum error method
-    if N_f > 0 && N_gt > 0
-        [component_errors, ~] = match_components_min_error(signal_data.components_gt, components);
-        error_avg_mode = mean(component_errors);
+    % Add noise
+    rng(133);
+    if snr_db < 100
+        signal = awgn(data.clean, snr_db, 'measured');
     else
-        component_errors = [];
-        error_avg_mode = NaN;
+        signal = data.clean;
     end
     
-    %% Store Results
-    results(case_idx).case_name = signal_data.name;
-    results(case_idx).N_gt = N_gt;
-    results(case_idx).N_f = N_f;
-    results(case_idx).error_total = error_total;
-    results(case_idx).error_avg_mode = error_avg_mode;
-    results(case_idx).signal_data = signal_data;
-    results(case_idx).components = components;
-    results(case_idx).reconstructed_signal = reconstructed_signal;
+    % Run TFMD
+    tic;
+    [modes, recon] = tfmd(signal, fs, options);
+    time = toc;
     
-    %% Display Case Results
-    fprintf('Results:\n');
-    fprintf('  Components: GT=%d, TFMD=%d\n', N_gt, N_f);
-    fprintf('  Total error (E_rel,total): %.6f\n', error_total);
-    if ~isnan(error_avg_mode)
-        fprintf('  Avg mode error (E_rel,avg): %.6f\n', error_avg_mode);
+    % Evaluate
+    N_f = length(modes);
+    err_total = norm(data.clean - recon) / norm(data.clean);
+    
+    % Match components
+    if N_f > 0 && data.num_gt > 0
+        err_modes = match_and_evaluate(data.components_gt, modes);
+        err_avg = mean(err_modes);
+    else
+        err_avg = NaN;
     end
-    fprintf('--------------------\n\n');
     
-    %% Create Individual Case Figure
-    create_case_figure(case_idx, results(case_idx));
+    % Store results
+    results{case_idx} = struct('name', data.name, 'N_gt', data.num_gt, ...
+        'N_f', N_f, 'err_total', err_total, 'err_avg', err_avg, ...
+        'time', time, 'data', data, 'modes', {modes}, 'recon', recon);
+    
+    fprintf('Found: %d modes | Error: %.4f | Time: %.3fs\n\n', ...
+            N_f, err_total, time);
+    
+    % Plot
+    plot_results(case_idx, data, modes, recon);
 end
 
-%% Generate Summary Table
-fprintf('=== TFMD Performance Summary ===\n');
-fprintf('%-25s | %3s | %3s | %12s | %12s\n', ...
-    'Case Name', 'N_g', 'N_f', 'E_rel,total', 'E_rel,avg');
-fprintf('%s\n', repmat('-', 1, 70));
-
-for i = 1:num_cases
-    fprintf('%-25s | %3d | %3d | %12.2e | %12.2e\n', ...
-        results(i).case_name, results(i).N_gt, results(i).N_f, ...
-        results(i).error_total, results(i).error_avg_mode);
+%% Summary table
+fprintf('====================================\n');
+fprintf('           Summary\n');
+fprintf('====================================\n');
+fprintf('Case | Name                    | GT | Found | Error    | Time\n');
+fprintf('-----|-------------------------|-------|-------|----------|------\n');
+for i = 1:6
+    r = results{i};
+    fprintf('%4d | %-23s | %3d | %5d | %.2e | %.3f\n', ...
+            i, r.name, r.N_gt, r.N_f, r.err_total, r.time);
 end
-fprintf('%s\n', repmat('-', 1, 70));
+fprintf('====================================\n\n');
 
-%% Performance Statistics
-total_components_gt = sum([results.N_gt]);
-total_components_found = sum([results.N_f]);
-detection_rate = total_components_found / total_components_gt * 100;
-mean_total_error = mean([results.error_total]);
+% Overall stats
+all_gt = sum(cellfun(@(x) x.N_gt, results));
+all_found = sum(cellfun(@(x) x.N_f, results));
+fprintf('Total: %d/%d components detected (%.1f%%)\n', ...
+        all_found, all_gt, 100*all_found/all_gt);
 
-fprintf('\nOverall Performance Statistics:\n');
-fprintf('  Total GT components: %d\n', total_components_gt);
-fprintf('  Total TFMD components: %d\n', total_components_found);
-fprintf('  Overall detection rate: %.1f%%\n', detection_rate);
-fprintf('  Mean total error: %.6f\n', mean_total_error);
+%% Helper functions
 
-fprintf('\n=== TFMD Test Suite Completed ===\n');
-
-%% Helper Functions
-
-function [component_errors, matched_pairs] = match_components_min_error(gt_components, tfmd_components)
-    % Simple component matching using minimum L2 error method
+function errors = match_and_evaluate(gt, modes)
+    % Simple greedy matching by minimum error
+    N_gt = length(gt);
+    N_modes = length(modes);
+    errors = zeros(1, min(N_gt, N_modes));
     
-    N_gt = length(gt_components);
-    N_tfmd = length(tfmd_components);
-    
-    if N_gt == 0 || N_tfmd == 0
-        component_errors = [];
-        matched_pairs = [];
-        return;
-    end
-    
-    % Compute error matrix (L2 normalized error between all pairs)
-    error_matrix = zeros(N_gt, N_tfmd);
+    % Error matrix
+    E = zeros(N_gt, N_modes);
     for i = 1:N_gt
-        for j = 1:N_tfmd
-            % Ensure same length by padding or truncating
-            len_min = min(length(gt_components{i}), length(tfmd_components{j}));
-            gt_comp = gt_components{i}(1:len_min);
-            tfmd_comp = tfmd_components{j}(1:len_min);
-            
-            % Compute normalized L2 error
-            error_matrix(i,j) = norm(gt_comp - tfmd_comp) / (norm(gt_comp) + eps);
+        for j = 1:N_modes
+            len = min(length(gt{i}), length(modes{j}));
+            E(i,j) = norm(gt{i}(1:len) - modes{j}(1:len)) / norm(gt{i}(1:len));
         end
     end
     
-    % Greedy matching: find minimum error pairs
-    matched_pairs = [];
-    component_errors = [];
-    used_tfmd = false(1, N_tfmd);
+    % Greedy matching
     used_gt = false(1, N_gt);
-    
-    for match_idx = 1:min(N_gt, N_tfmd)
-        % Find minimum error among unused components
-        temp_error = error_matrix;
-        temp_error(used_gt, :) = inf;
-        temp_error(:, used_tfmd) = inf;
-        
-        [min_error, linear_idx] = min(temp_error(:));
-        [gt_idx, tfmd_idx] = ind2sub(size(temp_error), linear_idx);
-        
-        matched_pairs(end+1,:) = [gt_idx, tfmd_idx];
-        component_errors(end+1) = min_error;
-        
-        used_gt(gt_idx) = true;
-        used_tfmd(tfmd_idx) = true;
+    used_modes = false(1, N_modes);
+    for k = 1:min(N_gt, N_modes)
+        E_temp = E;
+        E_temp(used_gt, :) = inf;
+        E_temp(:, used_modes) = inf;
+        [err, idx] = min(E_temp(:));
+        [i, j] = ind2sub(size(E), idx);
+        errors(k) = err;
+        used_gt(i) = true;
+        used_modes(j) = true;
     end
 end
 
-function create_case_figure(case_idx, result)
-    % Create visualization for individual test case
+function plot_results(case_idx, data, modes, recon)
+    % Simple visualization with proper component matching
+    figure('Position', [50+case_idx*30, 50+case_idx*30, 1200, 800]);
     
-    signal_data = result.signal_data;
-    components = result.components;
-    t = signal_data.t;
-    N_gt = result.N_gt;
-    N_f = result.N_f;
+    t = data.t * 1000;  % to ms
+    N_gt = data.num_gt;
+    N_f = length(modes);
     
-    % Determine optimal subplot layout based on total components
-    total_components = max(N_gt, N_f);
-    if total_components <= 2
-        subplot_rows = 2; subplot_cols = 3;
-    elseif total_components <= 4
-        subplot_rows = 3; subplot_cols = 3;
+    % Determine layout
+    if max(N_gt, N_f) <= 2
+        rows = 2; cols = 3;
+    elseif max(N_gt, N_f) <= 4
+        rows = 3; cols = 3;
     else
-        subplot_rows = 3; subplot_cols = 4;
+        rows = 3; cols = 4;
     end
     
-    figure('Name', sprintf('Case %d: %s', case_idx, result.case_name), ...
-           'Position', [50 + case_idx*30, 50 + case_idx*30, 1200, 800]);
-    
-    % Get component matching
-    if N_f > 0 && N_gt > 0
-        [component_errors, matched_pairs] = match_components_min_error(signal_data.components_gt, components);
-    else
-        component_errors = [];
-        matched_pairs = [];
-    end
-    
-    % 1. Original vs Reconstructed Signal
-    subplot(subplot_rows, subplot_cols, [1, 2]);
-    plot(t*1000, signal_data.clean, 'k-', 'LineWidth', 2, 'DisplayName', 'Original');
-    hold on;
-    plot(t*1000, result.reconstructed_signal, 'r--', 'LineWidth', 1.5, 'DisplayName', 'Reconstructed');
-    title(sprintf('Case %d: %s', case_idx, result.case_name), 'FontWeight', 'bold');
+    % 1. Original vs reconstructed
+    subplot(rows, cols, [1 2]);
+    plot(t, data.clean, 'k-', 'LineWidth', 2); hold on;
+    plot(t, recon, 'r--', 'LineWidth', 1.5);
+    title(sprintf('Case %d: %s', case_idx, data.name));
     xlabel('Time (ms)'); ylabel('Amplitude');
-    legend('Location', 'best'); grid on; axis tight;
+    legend('Original', 'Reconstructed');
+    grid on;
     
-    % Add performance metrics
-    text(0.02, 0.98, sprintf('GT:%d, Found:%d, Error:%.4f', N_gt, N_f, result.error_total), ...
-         'Units', 'normalized', 'VerticalAlignment', 'top', 'BackgroundColor', 'white');
+    % 2. Error
+    subplot(rows, cols, 3);
+    plot(t, data.clean - recon, 'g-');
+    title(sprintf('Error (RMS=%.4f)', rms(data.clean - recon)));
+    xlabel('Time (ms)'); grid on;
     
-    % 2. Reconstruction Error
-    subplot(subplot_rows, subplot_cols, 3);
-    error_signal = signal_data.clean - result.reconstructed_signal;
-    plot(t*1000, error_signal, 'g-', 'LineWidth', 1.5);
-    title(sprintf('Error (RMS=%.4f)', rms(error_signal)));
-    xlabel('Time (ms)'); ylabel('Error'); grid on; axis tight;
-    
-    % 3. Component Comparisons
-    max_display = min(max(N_gt, N_f), subplot_rows * subplot_cols - 3);
-    
-    % Display matched pairs first
-    comp_idx = 0;
-    for i = 1:size(matched_pairs, 1)
-        if comp_idx >= max_display; break; end
-        comp_idx = comp_idx + 1;
+    % 3. Match components first
+    matched_pairs = [];
+    if N_f > 0 && N_gt > 0
+        % Build error matrix
+        E = zeros(N_gt, N_f);
+        for i = 1:N_gt
+            for j = 1:N_f
+                len = min(length(data.components_gt{i}), length(modes{j}));
+                E(i,j) = norm(data.components_gt{i}(1:len) - modes{j}(1:len)) / ...
+                         norm(data.components_gt{i}(1:len));
+            end
+        end
         
-        subplot(subplot_rows, subplot_cols, 3 + comp_idx);
-        gt_idx = matched_pairs(i, 1);
-        tfmd_idx = matched_pairs(i, 2);
+        % Greedy matching
+        used_gt = false(1, N_gt);
+        used_modes = false(1, N_f);
+        matched_pairs = zeros(min(N_gt, N_f), 3);  % [gt_idx, mode_idx, error]
         
-        plot(t*1000, signal_data.components_gt{gt_idx}, 'b-', 'LineWidth', 2, 'DisplayName', 'GT');
-        hold on;
-        plot(t*1000, components{tfmd_idx}, 'r--', 'LineWidth', 1.5, 'DisplayName', 'TFMD');
-        
-        title(sprintf('GT%d ↔ TFMD%d (E=%.3f)', gt_idx, tfmd_idx, component_errors(i)));
-        xlabel('Time (ms)'); ylabel('Amplitude');
-        if comp_idx <= 2; legend('Location', 'best', 'FontSize', 8); end
-        grid on; axis tight;
+        for k = 1:min(N_gt, N_f)
+            E_temp = E;
+            E_temp(used_gt, :) = inf;
+            E_temp(:, used_modes) = inf;
+            [err, idx] = min(E_temp(:));
+            [i, j] = ind2sub(size(E), idx);
+            matched_pairs(k, :) = [i, j, err];
+            used_gt(i) = true;
+            used_modes(j) = true;
+        end
     end
     
-    % Display unmatched GT components
-    unmatched_gt = setdiff(1:N_gt, matched_pairs(:,1));
-    for i = 1:length(unmatched_gt)
-        if comp_idx >= max_display; break; end
-        comp_idx = comp_idx + 1;
+    % 4. Plot matched components
+    plot_idx = 4;
+    num_matched = size(matched_pairs, 1);
+    
+    for k = 1:min(num_matched, rows*cols-3)
+        subplot(rows, cols, plot_idx);
         
-        subplot(subplot_rows, subplot_cols, 3 + comp_idx);
-        plot(t*1000, signal_data.components_gt{unmatched_gt(i)}, 'b-', 'LineWidth', 2);
-        title(sprintf('Unmatched GT%d', unmatched_gt(i)));
-        xlabel('Time (ms)'); ylabel('Amplitude'); grid on; axis tight;
+        gt_idx = matched_pairs(k, 1);
+        mode_idx = matched_pairs(k, 2);
+        error = matched_pairs(k, 3);
+        
+        plot(t, data.components_gt{gt_idx}, 'b-', 'LineWidth', 2); hold on;
+        plot(t, modes{mode_idx}, 'r--', 'LineWidth', 1.5);
+        
+        title(sprintf('GT%d <-> Mode%d (E=%.3f)', gt_idx, mode_idx, error*100));
+        xlabel('Time (ms)'); 
+        ylabel('Amplitude');
+        legend('GT', 'TFMD', 'Location', 'best');
+        grid on;
+        
+        plot_idx = plot_idx + 1;
     end
     
-    % Display unmatched TFMD components
-    unmatched_tfmd = setdiff(1:N_f, matched_pairs(:,2));
-    for i = 1:length(unmatched_tfmd)
-        if comp_idx >= max_display; break; end
-        comp_idx = comp_idx + 1;
-        
-        subplot(subplot_rows, subplot_cols, 3 + comp_idx);
-        plot(t*1000, components{unmatched_tfmd(i)}, 'r--', 'LineWidth', 2);
-        title(sprintf('Unmatched TFMD%d', unmatched_tfmd(i)));
-        xlabel('Time (ms)'); ylabel('Amplitude'); grid on; axis tight;
+    % 5. Plot unmatched GT components
+    if N_gt > 0 && num_matched > 0
+        unmatched_gt = setdiff(1:N_gt, matched_pairs(:,1));
+        for i = 1:length(unmatched_gt)
+            if plot_idx > rows*cols; break; end
+            
+            subplot(rows, cols, plot_idx);
+            plot(t, data.components_gt{unmatched_gt(i)}, 'b-', 'LineWidth', 2);
+            title(sprintf('Unmatched GT%d', unmatched_gt(i)), 'Color', 'r');
+            xlabel('Time (ms)'); grid on;
+            plot_idx = plot_idx + 1;
+        end
     end
     
-    sgtitle(sprintf('TFMD Analysis - Case %d: %s', case_idx, result.case_name), 'FontWeight', 'bold');
+    % 6. Plot unmatched TFMD modes
+    if N_f > 0 && num_matched > 0
+        unmatched_modes = setdiff(1:N_f, matched_pairs(:,2));
+        for i = 1:length(unmatched_modes)
+            if plot_idx > rows*cols; break; end
+            
+            subplot(rows, cols, plot_idx);
+            plot(t, modes{unmatched_modes(i)}, 'r--', 'LineWidth', 2);
+            title(sprintf('Unmatched Mode%d', unmatched_modes(i)), 'Color', 'r');
+            xlabel('Time (ms)'); grid on;
+            plot_idx = plot_idx + 1;
+        end
+    end
+    
+    sgtitle(sprintf('Case %d: %s', case_idx, data.name));
 end
