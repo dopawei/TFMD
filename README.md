@@ -122,27 +122,6 @@ fprintf('Total modes extracted: %d (Stage 1: %d, Stage 2: %d)\n', ...
         N_f1 + N_f2, N_f1, N_f2);
 ```
 
-### Advanced Usage: Custom Analysis
-
-```matlab
-% Example: Analyze each extracted mode
-for i = 1:length(modes)
-    figure;
-    subplot(2,1,1);
-    plot((0:length(modes{i})-1)/fs, modes{i});
-    title(sprintf('Mode %d - Time Domain', i));
-    xlabel('Time (s)');
-    ylabel('Amplitude');
-    
-    subplot(2,1,2);
-    [psd, f] = pwelch(modes{i}, [], [], [], fs);
-    plot(f, 10*log10(psd));
-    title(sprintf('Mode %d - Power Spectral Density', i));
-    xlabel('Frequency (Hz)');
-    ylabel('Power/Frequency (dB/Hz)');
-end
-```
-
 ## Performance Characteristics
 
 Based on comprehensive numerical validation:
@@ -154,24 +133,6 @@ Based on comprehensive numerical validation:
   - 13× faster than ACMD for complex signals
   - 152× faster than SET
   - 577× faster than VGNMD
-
-## Validation Test Cases
-
-The repository includes six synthetic signal cases spanning diverse complexities:
-
-1. **Frequency-Separated Chirps**: Linear and quadratic chirps with clear frequency separation
-2. **Sinusoidal FM Signals**: Two FM components with different modulation parameters
-3. **Four Components Mix**: Heterogeneous components including chirps, tones, FM, and transient AM bursts
-4. **Low-Frequency Chirp and AM Tone**: Combined FM and AM characteristics
-5. **Generalized Nonlinear Signal**: Seven highly complex components with strong nonlinearity (3-second duration)
-6. **Two Simple Tones**: Baseline stationary sinusoids (10-second duration)
-
-## Real-World Application
-
-TFMD has been successfully applied to wind turbine blade vibration analysis, where it:
-- Automatically identified nine operational states from non-stationary strain signals
-- Separated fundamental (1P) and harmonic (2P) frequency components using TFMD²
-- Outperformed benchmark methods (VMD, EMD, ACMD, SET, VGNMD) in temporal localization and mode purity
 
 ## Citation
 
@@ -192,13 +153,6 @@ If you use this code in your research, please cite:
 
 For theoretical background and detailed methodology, please refer to:
 - Zhou, W., et al. (2022). Empirical Fourier decomposition: An accurate signal decomposition method for nonlinear and non-stationary time series analysis. *Mechanical Systems and Signal Processing*, 163, 108155.
-
-## Contributing
-
-Contributions are welcome! Please feel free to:
-- Submit bug reports or feature requests via GitHub Issues
-- Propose improvements through Pull Requests
-- Share your application examples
 
 ## License
 
