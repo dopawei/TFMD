@@ -78,28 +78,6 @@ TFMD works in 6 steps:
 - **High noise**: Reduce `beta` to 0.2-0.3
 - **Low noise**: Increase `beta` to 0.8-1.0
 
-## Test Signals
-
-The test suite includes 6 diverse signals:
-
-1. **Frequency-Separated Chirps** (2 components)
-2. **Sinusoidal FM** (2 components)
-3. **Four Components Mix** (chirp, tone, FM, burst)
-4. **Chirp and AM Tone** (2 components)
-5. **Generalized Nonlinear** (7 complex components)
-6. **Two Simple Tones** (10 seconds, 2 components)
-
-## Performance
-
-Tested on 6 synthetic signals (noise-free):
-
-| Metric | Result |
-|--------|--------|
-| Detection Rate | 100% (24/24 components found) |
-| Avg Total Error | < 0.04 |
-| Avg Mode Error | < 0.06 |
-| Speed | ~0.01-0.05 sec per signal |
-
 ## Requirements
 
 - MATLAB R2020a or later
@@ -163,15 +141,6 @@ legend('Original', 'Reconstructed');
 }
 ```
 
-## License
-
-MIT License - see LICENSE file
-
-## Contact
-
-**Wei Zhou**  
-zhouw6@szu.edu.cn  
-Shenzhen University, China
 
 ---
 
