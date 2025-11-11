@@ -36,11 +36,9 @@ The TFMD pipeline consists of the following key stages:
 ## File Structure
 
 - `tfmd.m`: The core function implementing the Time-Frequency Mode Decomposition algorithm
-- `tfmd2.m`: Implementation of the two-stage TFMD² refinement approach
-- `test.m`: Comprehensive test suite demonstrating TFMD on various synthetic signals
 - `generate_signal.m`: Script to generate the six synthetic test signals used in validation
-- `demo_wind_turbine.m`: Application example using real wind turbine vibration data
-
+- `test.m`: Comprehensive test suite demonstrating TFMD on various synthetic signals
+- 
 ## Requirements
 
 - **MATLAB** R2020a or later
