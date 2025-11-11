@@ -38,7 +38,7 @@ The TFMD pipeline consists of the following key stages:
 - `tfmd.m`: The core function implementing the Time-Frequency Mode Decomposition algorithm
 - `generate_signal.m`: Script to generate the six synthetic test signals used in validation
 - `test.m`: Comprehensive test suite demonstrating TFMD on various synthetic signals
-- 
+  
 ## Requirements
 
 - **MATLAB** R2020a or later
