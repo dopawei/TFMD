@@ -130,19 +130,14 @@ legend('Original', 'Reconstructed');
 
 ```bibtex
 @article{zhou2025tfmd,
-  title={Time-Frequency Mode Decomposition: A Morphological 
-         Segmentation Framework for Signal Analysis},
-  author={Zhou, Wei and Li, Wei-Jian and Zhu, Desen and 
-          Xu, Hongbin and Ren, Wei-Xin},
+  title={Time-Frequency Mode Decomposition: A Morphological Segmentation Framework for Signal Analysis},
+  author={Zhou, Wei and Li, Wei-Jian and Zhu, Desen and Xu, Hongbin and Ren, Wei-Xin},
   year={2025},
   eprint={2507.11919},
   archivePrefix={arXiv},
   primaryClass={eess.SP}
 }
 ```
-
-
----
 
 **Related Work:**  
 Zhou et al. (2022). Empirical Fourier decomposition. *Mech. Syst. Signal Process.*, 163, 108155.
