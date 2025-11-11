@@ -102,9 +102,7 @@ all_modes = [modes1, modes2];
 final_signal = recon1 + recon2;
 ```
 
-## Examples
-
-### Example 1: Two-tone signal
+## Example: Two-tone signal
 ```matlab
 fs = 1000;
 t = (0:1/fs:1-1/fs)';
@@ -113,17 +111,6 @@ signal = sin(2*pi*100*t) + 0.8*sin(2*pi*200*t);
 [modes, recon] = tfmd(signal, fs);
 fprintf('Found %d modes\n', length(modes));
 % Output: Found 2 modes
-```
-
-### Example 2: Chirp signal
-```matlab
-fs = 1000;
-t = (0:1/fs:1-1/fs)';
-signal = chirp(t, 20, 1, 70);
-
-[modes, recon] = tfmd(signal, fs);
-plot(t, signal, 'k-', t, recon, 'r--');
-legend('Original', 'Reconstructed');
 ```
 
 ## Citation
