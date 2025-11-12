@@ -1,6 +1,8 @@
 # TFMD: Time-Frequency Mode Decomposition
+**Paper:** [Time-Frequency Mode Decomposition: A Morphological Segmentation Framework for Signal Analysis](https://doi.org/10.48550/arXiv.2507.11919) (arXiv 2025)
 
 MATLAB implementation of **Time-Frequency Mode Decomposition (TFMD)** - a morphological segmentation framework for automatic multicomponent signal analysis.
+...
 
 ## What is TFMD?
 
@@ -84,23 +86,6 @@ TFMD works in 6 steps:
 - Signal Processing Toolbox (for `stft`, `istft`)
 - Image Processing Toolbox (for `bwlabel`)
 - Statistics Toolbox (for `kmeans`)
-
-## Advanced: Two-Stage TFMD²
-
-For signals with very weak components:
-
-```matlab
-% Stage 1: Extract strong components
-[modes1, recon1] = tfmd(signal, fs);
-
-% Stage 2: Extract weak components from residual
-residual = signal - recon1;
-[modes2, recon2] = tfmd(residual, fs);
-
-% Combine
-all_modes = [modes1, modes2];
-final_signal = recon1 + recon2;
-```
 
 ## Example: Two-tone signal
 ```matlab
