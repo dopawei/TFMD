@@ -2,7 +2,7 @@
 **Paper:** [Time-Frequency Mode Decomposition: A Morphological Segmentation Framework for Signal Analysis](https://doi.org/10.48550/arXiv.2507.11919) (arXiv 2025)
 
 MATLAB implementation of **Time-Frequency Mode Decomposition (TFMD)** - a morphological segmentation framework for automatic multicomponent signal analysis.
-...
+
 
 ## What is TFMD?
 
