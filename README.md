@@ -11,6 +11,11 @@ MATLAB implementation of **Time-Frequency Mode Decomposition (TFMD)** for multic
 
 TFMD defines each mode as the time domain signal reconstructed by inverse STFT from one connected support region in the short-time Fourier transform (STFT) plane. Signal decomposition thereby becomes the estimation of an unknown number of connected support regions, so the number of modes is an output of the segmentation rather than an input.
 
+<p align="center">
+  <img src="figures/tfmd_workflow.png" alt="TFMD workflow: input signal, STFT plane, segmentation into connected support regions, and reconstruction of one mode per region by inverse STFT" width="100%">
+</p>
+<p align="center"><em>Conceptual overview of the TFMD segmentation and reconstruction workflow (Fig. 1 of <a href="https://doi.org/10.1016/j.oceaneng.2026.128438">Zhou et al., 2026</a>).</em></p>
+
 **Results reported in the paper:**
 - The number of modes is inferred from the segmentation and matched the ground truth in all six synthetic cases from 10 to 40 dB input SNR
 - Taking the median over seven input SNR levels (10-40 dB), TFMD attained the lowest average mode error in all six synthetic cases, compared with EMD, VMD, ACMD, SET, and VGNMD
@@ -74,6 +79,7 @@ final = recon1 + recon2;
 | `tfmd.m` | Core TFMD algorithm |
 | `generate_signal.m` | Six synthetic signals of the paper (Section 3.1) |
 | `test.m` | Reproduces Tables 1 and 2 of the paper |
+| `figures/tfmd_workflow.png` | Workflow figure (Fig. 1 of the paper) |
 
 ## Synthetic Signals
 
@@ -90,7 +96,7 @@ Case 6 contains six operating states of 20 s each, with piecewise constant funda
 
 ## Method Overview
 
-TFMD works in 6 steps:
+TFMD works in 6 steps (Steps 2-5 are the four segmentation steps shown in the figure above):
 
 1. **STFT** - Transform the signal to the time-frequency plane with a Gaussian window
 2. **Coefficient selection** - Apply two-cluster k-means to the STFT magnitudes to select coefficients dominated by signal energy
